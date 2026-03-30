@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chaos Forge</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { margin:0; font-family: monospace; background:#111; color:#0f0; text-align:center; }
+        #screen { max-width:100%; margin:auto; padding:10px; }
+        button { background:#222; color:#0f0; border:2px solid #0f0; padding:12px 20px; margin:8px; font-size:18px; }
+        canvas { image-rendering: pixelated; border:2px solid #0f0; background:#000; }
+        .hidden { display:none; }
+    </style>
+</head>
+<body>
+<div id="screen">
+    <h1>🔥 CHAOS FORGE 🔥</h1>
+    <p>Daily Random 20-30 min Break</p>
+
+    <!-- Avatar Section -->
+    <div id="avatarScreen">
+        <h2>Your Pixel Avatar</h2>
+        <canvas id="avatarCanvas" width="128" height="128"></canvas><br>
+        <button onclick="randomizeAvatar()">Randomize</button>
+        <button onclick="saveAvatar()">Save & Continue</button>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="mainMenu" class="hidden">
+        <button onclick="startDailyEvent()">Forge Today's Chaos (1 Free)</button>
+        <button onclick="showAvatar()">Customize Avatar</button>
+        <button onclick="showPremium()">Go Premium (Unlock Unlimited)</button>
+    </div>
+
+    <!-- Game Container -->
+    <div id="gameContainer" class="hidden">
+        <h2 id="eventTitle"></h2>
+        <canvas id="gameCanvas" width="320" height="320"></canvas>
+        <div id="gameUI"></div>
+        <button onclick="endEvent()">End Event & Return</button>
+    </div>
+
+    <p id="status"></p>
+</div>
+
+<script>
+// ============== CONFIG ==============
+// Replace these with your real Supabase values after creating project
+const SUPABASE_URL = 'https://your-project.supabase.co';
+const SUPABASE_ANON_KEY = 'your-anon-key-here';
+
+const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Simple local fallback if Supabase not set yet
+let userId = 'demo-user
