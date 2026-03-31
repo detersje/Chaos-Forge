@@ -6,61 +6,15 @@
     <title>Chaos Forge</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { 
-            margin:0; 
-            font-family: monospace; 
-            background:#111; 
-            color:#0f0; 
-            text-align:center; 
-            overflow-y:auto; 
-        }
-        #screen { 
-            max-width:100%; 
-            margin:auto; 
-            padding:10px; 
-        }
-        button { 
-            background:#222; 
-            color:#0f0; 
-            border:2px solid #0f0; 
-            padding:12px 20px; 
-            margin:8px; 
-            font-size:18px; 
-            width:90%; 
-            max-width:320px; 
-            touch-action: manipulation;
-        }
-        button:active {
-            background:#0f0;
-            color:#111;
-            transform: scale(0.95);
-        }
-        canvas { 
-            image-rendering: pixelated; 
-            border:3px solid #0f0; 
-            background:#111; 
-            max-width:100%; 
-            touch-action: none; 
-            display: block;
-            margin: 10px auto;
-        }
+        body { margin:0; font-family: monospace; background:#111; color:#0f0; text-align:center; overflow-y:auto; }
+        #screen { max-width:100%; margin:auto; padding:10px; }
+        button { background:#222; color:#0f0; border:2px solid #0f0; padding:12px 20px; margin:8px; font-size:18px; width:90%; max-width:320px; touch-action: manipulation; }
+        button:active { background:#0f0; color:#111; transform: scale(0.95); }
+        canvas { image-rendering: pixelated; border:3px solid #0f0; background:#111; max-width:100%; touch-action: none; display:block; margin:10px auto; }
         .hidden { display:none; }
-        input { 
-            background:#222; 
-            color:#0f0; 
-            border:2px solid #0f0; 
-            padding:10px; 
-            font-size:16px; 
-            width:80%; 
-        }
-        #foundWords { 
-            font-size:14px; 
-            margin:10px; 
-            text-align:left; 
-            max-width:320px; 
-            margin:auto; 
-        }
-        h1 { margin: 10px 0 5px; }
+        input { background:#222; color:#0f0; border:2px solid #0f0; padding:10px; font-size:16px; width:80%; }
+        #foundWords { font-size:14px; margin:10px; text-align:left; max-width:320px; margin:auto; }
+        h1 { margin:10px 0 5px; }
     </style>
 </head>
 <body>
@@ -95,44 +49,34 @@
 </div>
 
 <script>
+// ============== SUPABASE CONFIG ==============
+const SUPABASE_URL = 'https://rsswlyvuypjcwjbijvmk.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzc3dseXZ1eXBqY3dqYmlqdm1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NTk1ODgsImV4cCI6MjA5MDUzNTU4OH0.kkftjqq-SouvplCuCSXufMysioQUPrCRuDPaGj17IgE';
+
+const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============== STATE ==============
+let userId = null;
+let avatarData = { headColor: '#fdb', bodyColor: '#0f0', hat: 1 };
+let today = new Date().toISOString().split('T')[0];
+
 // ============== AVATAR ==============
 const avCanvas = document.getElementById('avatarCanvas');
 const avCtx = avCanvas.getContext('2d');
 
-let avatarData = { 
-    headColor: '#fdb', 
-    bodyColor: '#0f0', 
-    hat: 1 
-};
-
 function drawAvatar() {
     avCtx.clearRect(0, 0, 160, 160);
-    avCtx.fillStyle = '#111';
-    avCtx.fillRect(0, 0, 160, 160);
+    avCtx.fillStyle = '#111'; avCtx.fillRect(0, 0, 160, 160);
 
-    // Head
-    avCtx.fillStyle = avatarData.headColor;
-    avCtx.fillRect(56, 32, 48, 48);
-    
-    // Body
-    avCtx.fillStyle = avatarData.bodyColor;
-    avCtx.fillRect(48, 80, 64, 64);
-    
-    // Eyes
+    avCtx.fillStyle = avatarData.headColor; avCtx.fillRect(56, 32, 48, 48);
+    avCtx.fillStyle = avatarData.bodyColor; avCtx.fillRect(48, 80, 64, 64);
     avCtx.fillStyle = '#000';
-    avCtx.fillRect(68, 48, 8, 12);
-    avCtx.fillRect(84, 48, 8, 12);
-    
-    // Mouth
-    avCtx.fillStyle = '#000';
+    avCtx.fillRect(68, 48, 8, 12); avCtx.fillRect(84, 48, 8, 12);
     avCtx.fillRect(72, 65, 16, 4);
-    
-    // Hat
+
     if (avatarData.hat) {
-        avCtx.fillStyle = '#f00';
-        avCtx.fillRect(48, 20, 64, 20);
-        avCtx.fillStyle = '#ff0';
-        avCtx.fillRect(60, 15, 40, 8);
+        avCtx.fillStyle = '#f00'; avCtx.fillRect(48, 20, 64, 20);
+        avCtx.fillStyle = '#ff0'; avCtx.fillRect(60, 15, 40, 8);
     }
 }
 
@@ -143,14 +87,22 @@ function randomizeAvatar() {
     drawAvatar();
 }
 
-function saveAvatar() {
-    drawAvatar();
-    alert('✅ Avatar saved!');
+async function saveAvatar() {
+    if (!userId) {
+        const { data } = await supabase.auth.signInAnonymously();
+        userId = data.user.id;
+    }
+    await supabase.from('avatars').upsert({
+        user_id: userId,
+        data: avatarData,
+        updated_at: new Date().toISOString()
+    });
+    alert('✅ Avatar saved to Supabase!');
     document.getElementById('avatarScreen').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
 }
 
-// ============== DAILY EVENT ==============
+// ============== DAILY EVENT LOGIC (1 free per day, no repeats) ==============
 const eventTypes = [
     {name: "Word Find", time: "20-25 min", fn: startWordFind},
     {name: "Sudoku", time: "20 min", fn: startSudoku},
@@ -163,39 +115,60 @@ const eventTypes = [
     {name: "Funny Game", time: "20 min", fn: startFunnyGame}
 ];
 
-function startDailyEvent() {
+async function startDailyEvent() {
+    if (!userId) {
+        const { data } = await supabase.auth.signInAnonymously();
+        userId = data.user.id;
+    }
+
+    // Check daily limit
+    const { data: todayEvent } = await supabase.from('daily_events').select('*').eq('user_id', userId).eq('date', today).single();
+    if (todayEvent && !todayEvent.premium) {
+        document.getElementById('status').textContent = 'Free event already used today. Return tomorrow!';
+        return;
+    }
+
+    // Pick random unused event
+    const { data: used } = await supabase.from('used_events').select('event_name').eq('user_id', userId);
+    const usedNames = used ? used.map(u => u.event_name) : [];
+
+    let chosen = null;
+    let attempts = 0;
+    while (!chosen && attempts < 30) {
+        chosen = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        if (!usedNames.includes(chosen.name)) break;
+        chosen = null;
+        attempts++;
+    }
+    if (!chosen) chosen = eventTypes[0];
+
+    // Record usage
+    await supabase.from('daily_events').upsert({ user_id: userId, date: today, event_name: chosen.name, premium: false });
+    await supabase.from('used_events').insert({ user_id: userId, event_name: chosen.name });
+
+    // Launch game
     document.getElementById('mainMenu').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
-    
-    // Start with Word Find for easy testing
-    const chosen = eventTypes[0];
     document.getElementById('eventTitle').textContent = `${chosen.name} • ${chosen.time}`;
     document.getElementById('gameUI').innerHTML = '';
     chosen.fn();
 }
 
-// ============== FULL WORD FIND GAME ==============
+// ============== WORD FIND (full playable) ==============
 let wordFindGrid = [];
 let wordFindWords = ["CHAOS","FORGE","PIXEL","AVATAR","DAILY","RANDOM","PUZZLE","BREAK","QUEST","GAME"];
 let foundWords = [];
 let selectedCells = [];
 
 function startWordFind() {
-    wordFindGrid = [
-        ['E','C','H','A','O','S','J','B','Z','X'],
-        ['S','O','B','D','A','I','L','Y','D','K'],
-        ['M','J','N','F','O','R','G','E','J','N'],
-        ['X','Q','U','E','S','T','V','Y','R','P'],
-        ['Z','V','G','A','M','E','Y','F','Q','P'],
-        ['K','M','Q','A','V','A','T','A','R','D'],
-        ['K','R','A','N','D','O','M','W','T','I'],
-        ['V','G','K','P','I','X','E','L','R','Y'],
-        ['B','R','E','A','K','Q','S','X','B','F'],
-        ['W','P','U','Z','Z','L','E','P','B','M']
+    wordFindGrid = [ /* same 10x10 grid as before */ 
+        ['E','C','H','A','O','S','J','B','Z','X'],['S','O','B','D','A','I','L','Y','D','K'],
+        ['M','J','N','F','O','R','G','E','J','N'],['X','Q','U','E','S','T','V','Y','R','P'],
+        ['Z','V','G','A','M','E','Y','F','Q','P'],['K','M','Q','A','V','A','T','A','R','D'],
+        ['K','R','A','N','D','O','M','W','T','I'],['V','G','K','P','I','X','E','L','R','Y'],
+        ['B','R','E','A','K','Q','S','X','B','F'],['W','P','U','Z','Z','L','E','P','B','M']
     ];
-
-    foundWords = [];
-    selectedCells = [];
+    foundWords = []; selectedCells = [];
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const cellSize = 32;
@@ -203,122 +176,87 @@ function startWordFind() {
     function drawGrid() {
         ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
         ctx.strokeStyle = '#0f0'; ctx.lineWidth = 2;
-        for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 10; c++) {
-                ctx.strokeRect(c*cellSize, r*cellSize, cellSize, cellSize);
-                ctx.fillStyle = '#0f0';
-                ctx.font = 'bold 22px monospace';
-                ctx.fillText(wordFindGrid[r][c], c*cellSize + 8, r*cellSize + 24);
-            }
+        for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) {
+            ctx.strokeRect(c*cellSize, r*cellSize, cellSize, cellSize);
+            ctx.fillStyle = '#0f0'; ctx.font = 'bold 22px monospace';
+            ctx.fillText(wordFindGrid[r][c], c*cellSize + 8, r*cellSize + 24);
         }
-        document.getElementById('gameUI').innerHTML = `
-            <div id="foundWords">Found: ${foundWords.join(', ') || 'None yet'}</div>
-            <p>Drag finger across letters (horizontal or vertical only).</p>
-        `;
+        document.getElementById('gameUI').innerHTML = `<div id="foundWords">Found: ${foundWords.join(', ') || 'None yet'}</div><p>Drag finger horizontally or vertically.</p>`;
     }
-
     drawGrid();
 
-    let isDragging = false;
-    let startRow = -1, startCol = -1;
-
-    canvas.addEventListener('touchstart', (e) => {
+    let isDragging = false, startRow = -1, startCol = -1;
+    canvas.addEventListener('touchstart', e => {
         isDragging = true;
         const rect = canvas.getBoundingClientRect();
         const x = e.touches[0].clientX - rect.left;
         const y = e.touches[0].clientY - rect.top;
-        startCol = Math.floor(x / cellSize);
-        startRow = Math.floor(y / cellSize);
+        startCol = Math.floor(x / cellSize); startRow = Math.floor(y / cellSize);
         selectedCells = [];
     });
-
-    canvas.addEventListener('touchmove', (e) => {
+    canvas.addEventListener('touchmove', e => {
         if (!isDragging) return;
         const rect = canvas.getBoundingClientRect();
         const x = e.touches[0].clientX - rect.left;
         const y = e.touches[0].clientY - rect.top;
-        const col = Math.floor(x / cellSize);
-        const row = Math.floor(y / cellSize);
+        const col = Math.floor(x / cellSize); const row = Math.floor(y / cellSize);
         if (row >= 0 && row < 10 && col >= 0 && col < 10) {
             if (row === startRow || col === startCol) {
                 selectedCells = [];
-                if (row === startRow) {
-                    const minC = Math.min(startCol, col);
-                    const maxC = Math.max(startCol, col);
-                    for (let c = minC; c <= maxC; c++) selectedCells.push({r:row, c:c});
-                } else if (col === startCol) {
-                    const minR = Math.min(startRow, row);
-                    const maxR = Math.max(startRow, row);
-                    for (let r = minR; r <= maxR; r++) selectedCells.push({r:r, c:col});
-                }
+                if (row === startRow) for (let c = Math.min(startCol,col); c <= Math.max(startCol,col); c++) selectedCells.push({r:row, c:c});
+                else for (let r = Math.min(startRow,row); r <= Math.max(startRow,row); r++) selectedCells.push({r:r, c:col});
             }
         }
     });
-
     canvas.addEventListener('touchend', () => {
         isDragging = false;
         if (selectedCells.length > 2) {
-            let word = '';
-            selectedCells.forEach(cell => word += wordFindGrid[cell.r][cell.c]);
-            const reverseWord = word.split('').reverse().join('');
-            if (wordFindWords.includes(word) || wordFindWords.includes(reverseWord)) {
-                const foundWord = wordFindWords.includes(word) ? word : reverseWord;
-                if (!foundWords.includes(foundWord)) {
-                    foundWords.push(foundWord);
-                    alert(`Found: ${foundWord}!`);
-                    const foundEl = document.getElementById('foundWords');
-                    if (foundEl) foundEl.textContent = `Found: ${foundWords.join(', ')}`;
-                    if (foundWords.length === wordFindWords.length) {
-                        alert('🎉 You found all 10 words!');
-                    }
-                }
+            let word = selectedCells.map(cell => wordFindGrid[cell.r][cell.c]).join('');
+            let reverseWord = word.split('').reverse().join('');
+            let foundWord = wordFindWords.includes(word) ? word : (wordFindWords.includes(reverseWord) ? reverseWord : null);
+            if (foundWord && !foundWords.includes(foundWord)) {
+                foundWords.push(foundWord);
+                alert(`Found: ${foundWord}!`);
+                document.getElementById('foundWords').textContent = `Found: ${foundWords.join(', ')}`;
+                if (foundWords.length === wordFindWords.length) alert('🎉 All words found!');
             }
         }
         selectedCells = [];
     });
 }
 
-// ============== OTHER GAMES (placeholders) ==============
-function startSudoku() {
+// ============== PLACEHOLDER GAMES ==============
+function startSudoku() { /* same demo as before */ 
     const ctx = document.getElementById('gameCanvas').getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
     ctx.fillStyle = '#0f0'; ctx.font = 'bold 18px monospace';
     ctx.fillText('Sudoku Demo', 80, 180);
-    document.getElementById('gameUI').innerHTML = '<p>Full Sudoku coming soon.</p>';
+    document.getElementById('gameUI').innerHTML = '<p>Full version soon.</p>';
 }
-
-function startRPGBattle() {
+function startRPGBattle() { /* avatar battle demo */ 
     const ctx = document.getElementById('gameCanvas').getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
     ctx.fillStyle = avatarData.bodyColor; ctx.fillRect(80,180,50,70);
     ctx.fillStyle = avatarData.headColor; ctx.fillRect(88,140,34,40);
-    document.getElementById('gameUI').innerHTML = '<p>Your avatar is ready for battle!</p>';
+    document.getElementById('gameUI').innerHTML = '<p>Avatar battle ready!</p>';
 }
-
-function startRiddle() {
-    document.getElementById('gameUI').innerHTML = `
-        <p>What has keys but can't open locks?</p>
-        <input type="text" id="riddleAnswer" placeholder="Answer">
-        <button onclick="checkRiddle()">Submit</button>
-    `;
-}
-window.checkRiddle = function() {
+function startRiddle() { document.getElementById('gameUI').innerHTML = `<p>What has keys but can't open locks?</p><input id="riddleAnswer" placeholder="Answer"><button onclick="checkRiddle()">Submit</button>`; }
+window.checkRiddle = () => {
     const ans = document.getElementById('riddleAnswer').value.toLowerCase();
     if (ans.includes('piano') || ans.includes('keyboard')) alert('Correct!');
     else alert('Try again.');
 };
-
-function startStory(){ document.getElementById('gameUI').innerHTML = '<p>Story mode coming soon.</p>'; }
-function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming soon.</p>'; }
-function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming soon.</p>'; }
-function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming soon.</p>'; }
-function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny tap game coming soon.</p>'; }
+function startStory(){ document.getElementById('gameUI').innerHTML = '<p>Story mode coming.</p>'; }
+function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming.</p>'; }
+function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming.</p>'; }
+function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming.</p>'; }
+function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny game coming.</p>'; }
 
 // ============== UTILS ==============
 function endEvent() {
     document.getElementById('gameContainer').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
-    document.getElementById('status').textContent = 'Event complete • New chaos tomorrow!';
+    document.getElementById('status').textContent = 'Progress saved in Supabase • New event tomorrow!';
 }
 
 function showAvatar() {
@@ -328,14 +266,21 @@ function showAvatar() {
 }
 
 function showPremium() {
-    alert('Premium unlocks unlimited events ($4.99/mo or $29 one-time).');
+    alert('Premium: $4.99/month or $29 one-time unlocks unlimited events.');
 }
 
 // ============== INIT ==============
-function init() {
-    drawAvatar();   // Force draw on load
+async function init() {
+    const { data } = await supabase.auth.signInAnonymously();
+    userId = data.user.id;
+
+    // Load saved avatar
+    const { data: av } = await supabase.from('avatars').select('data').eq('user_id', userId).single();
+    if (av && av.data) avatarData = av.data;
+
+    drawAvatar();
     document.getElementById('avatarScreen').classList.remove('hidden');
-    document.getElementById('status').textContent = '✅ Ready • Tap Randomize then Save';
+    document.getElementById('status').textContent = '✅ Connected to Supabase • 1 free daily event';
 }
 init();
 </script>
