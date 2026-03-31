@@ -12,8 +12,6 @@
         button:active { background:#0f0; color:#111; transform: scale(0.95); }
         canvas { image-rendering: pixelated; border:3px solid #0f0; background:#111; max-width:100%; touch-action: none; display:block; margin:10px auto; }
         .hidden { display:none; }
-        input { background:#222; color:#0f0; border:2px solid #0f0; padding:10px; font-size:16px; width:80%; }
-        #foundWords { font-size:14px; margin:10px; text-align:left; max-width:320px; margin:auto; }
         h1 { margin:10px 0 5px; }
     </style>
 </head>
@@ -49,7 +47,7 @@
 </div>
 
 <script>
-// ============== SUPABASE CONFIG ==============
+// ============== SUPABASE ==============
 const SUPABASE_URL = 'https://rsswlyvuypjcwjbijvmk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzc3dseXZ1eXBqY3dqYmlqdm1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NTk1ODgsImV4cCI6MjA5MDUzNTU4OH0.kkftjqq-SouvplCuCSXufMysioQUPrCRuDPaGj17IgE';
 
@@ -60,23 +58,35 @@ let userId = null;
 let avatarData = { headColor: '#fdb', bodyColor: '#0f0', hat: 1 };
 let today = new Date().toISOString().split('T')[0];
 
-// ============== AVATAR ==============
+// ============== AVATAR (Fixed redraw) ==============
 const avCanvas = document.getElementById('avatarCanvas');
 const avCtx = avCanvas.getContext('2d');
 
 function drawAvatar() {
     avCtx.clearRect(0, 0, 160, 160);
-    avCtx.fillStyle = '#111'; avCtx.fillRect(0, 0, 160, 160);
+    avCtx.fillStyle = '#111';
+    avCtx.fillRect(0, 0, 160, 160);
 
-    avCtx.fillStyle = avatarData.headColor; avCtx.fillRect(56, 32, 48, 48);
-    avCtx.fillStyle = avatarData.bodyColor; avCtx.fillRect(48, 80, 64, 64);
+    // Head
+    avCtx.fillStyle = avatarData.headColor;
+    avCtx.fillRect(56, 32, 48, 48);
+    
+    // Body
+    avCtx.fillStyle = avatarData.bodyColor;
+    avCtx.fillRect(48, 80, 64, 64);
+    
+    // Eyes + Mouth
     avCtx.fillStyle = '#000';
-    avCtx.fillRect(68, 48, 8, 12); avCtx.fillRect(84, 48, 8, 12);
+    avCtx.fillRect(68, 48, 8, 12);
+    avCtx.fillRect(84, 48, 8, 12);
     avCtx.fillRect(72, 65, 16, 4);
 
+    // Hat
     if (avatarData.hat) {
-        avCtx.fillStyle = '#f00'; avCtx.fillRect(48, 20, 64, 20);
-        avCtx.fillStyle = '#ff0'; avCtx.fillRect(60, 15, 40, 8);
+        avCtx.fillStyle = '#f00';
+        avCtx.fillRect(48, 20, 64, 20);
+        avCtx.fillStyle = '#ff0';
+        avCtx.fillRect(60, 15, 40, 8);
     }
 }
 
@@ -88,6 +98,7 @@ function randomizeAvatar() {
 }
 
 async function saveAvatar() {
+    drawAvatar(); // Force redraw before save
     if (!userId) {
         const { data } = await supabase.auth.signInAnonymously();
         userId = data.user.id;
@@ -97,12 +108,12 @@ async function saveAvatar() {
         data: avatarData,
         updated_at: new Date().toISOString()
     });
-    alert('✅ Avatar saved to Supabase!');
+    alert('✅ Avatar saved!');
     document.getElementById('avatarScreen').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
 }
 
-// ============== DAILY EVENT LOGIC (1 free per day, no repeats) ==============
+// ============== DAILY EVENT (starts with Word Find for testing) ==============
 const eventTypes = [
     {name: "Word Find", time: "20-25 min", fn: startWordFind},
     {name: "Sudoku", time: "20 min", fn: startSudoku},
@@ -121,32 +132,23 @@ async function startDailyEvent() {
         userId = data.user.id;
     }
 
-    // Check daily limit
+    // Daily limit check (1 free)
     const { data: todayEvent } = await supabase.from('daily_events').select('*').eq('user_id', userId).eq('date', today).single();
     if (todayEvent && !todayEvent.premium) {
-        document.getElementById('status').textContent = 'Free event already used today. Return tomorrow!';
+        alert('Free event used today. Come back tomorrow!');
         return;
     }
 
-    // Pick random unused event
+    // Pick random
     const { data: used } = await supabase.from('used_events').select('event_name').eq('user_id', userId);
     const usedNames = used ? used.map(u => u.event_name) : [];
 
-    let chosen = null;
-    let attempts = 0;
-    while (!chosen && attempts < 30) {
-        chosen = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-        if (!usedNames.includes(chosen.name)) break;
-        chosen = null;
-        attempts++;
-    }
-    if (!chosen) chosen = eventTypes[0];
+    let chosen = eventTypes.find(e => !usedNames.includes(e.name)) || eventTypes[0];
 
-    // Record usage
+    // Record
     await supabase.from('daily_events').upsert({ user_id: userId, date: today, event_name: chosen.name, premium: false });
     await supabase.from('used_events').insert({ user_id: userId, event_name: chosen.name });
 
-    // Launch game
     document.getElementById('mainMenu').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
     document.getElementById('eventTitle').textContent = `${chosen.name} • ${chosen.time}`;
@@ -154,14 +156,14 @@ async function startDailyEvent() {
     chosen.fn();
 }
 
-// ============== WORD FIND (full playable) ==============
+// ============== WORD FIND (full) ==============
 let wordFindGrid = [];
 let wordFindWords = ["CHAOS","FORGE","PIXEL","AVATAR","DAILY","RANDOM","PUZZLE","BREAK","QUEST","GAME"];
 let foundWords = [];
 let selectedCells = [];
 
 function startWordFind() {
-    wordFindGrid = [ /* same 10x10 grid as before */ 
+    wordFindGrid = [
         ['E','C','H','A','O','S','J','B','Z','X'],['S','O','B','D','A','I','L','Y','D','K'],
         ['M','J','N','F','O','R','G','E','J','N'],['X','Q','U','E','S','T','V','Y','R','P'],
         ['Z','V','G','A','M','E','Y','F','Q','P'],['K','M','Q','A','V','A','T','A','R','D'],
@@ -176,12 +178,15 @@ function startWordFind() {
     function drawGrid() {
         ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
         ctx.strokeStyle = '#0f0'; ctx.lineWidth = 2;
-        for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) {
-            ctx.strokeRect(c*cellSize, r*cellSize, cellSize, cellSize);
-            ctx.fillStyle = '#0f0'; ctx.font = 'bold 22px monospace';
-            ctx.fillText(wordFindGrid[r][c], c*cellSize + 8, r*cellSize + 24);
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 10; c++) {
+                ctx.strokeRect(c*cellSize, r*cellSize, cellSize, cellSize);
+                ctx.fillStyle = '#0f0';
+                ctx.font = 'bold 22px monospace';
+                ctx.fillText(wordFindGrid[r][c], c*cellSize + 8, r*cellSize + 24);
+            }
         }
-        document.getElementById('gameUI').innerHTML = `<div id="foundWords">Found: ${foundWords.join(', ') || 'None yet'}</div><p>Drag finger horizontally or vertically.</p>`;
+        document.getElementById('gameUI').innerHTML = `<div id="foundWords">Found: ${foundWords.join(', ') || 'None yet'}</div><p>Drag finger across letters (horizontal/vertical).</p>`;
     }
     drawGrid();
 
@@ -191,7 +196,8 @@ function startWordFind() {
         const rect = canvas.getBoundingClientRect();
         const x = e.touches[0].clientX - rect.left;
         const y = e.touches[0].clientY - rect.top;
-        startCol = Math.floor(x / cellSize); startRow = Math.floor(y / cellSize);
+        startCol = Math.floor(x / cellSize);
+        startRow = Math.floor(y / cellSize);
         selectedCells = [];
     });
     canvas.addEventListener('touchmove', e => {
@@ -199,12 +205,14 @@ function startWordFind() {
         const rect = canvas.getBoundingClientRect();
         const x = e.touches[0].clientX - rect.left;
         const y = e.touches[0].clientY - rect.top;
-        const col = Math.floor(x / cellSize); const row = Math.floor(y / cellSize);
-        if (row >= 0 && row < 10 && col >= 0 && col < 10) {
-            if (row === startRow || col === startCol) {
-                selectedCells = [];
-                if (row === startRow) for (let c = Math.min(startCol,col); c <= Math.max(startCol,col); c++) selectedCells.push({r:row, c:c});
-                else for (let r = Math.min(startRow,row); r <= Math.max(startRow,row); r++) selectedCells.push({r:r, c:col});
+        const col = Math.floor(x / cellSize);
+        const row = Math.floor(y / cellSize);
+        if (row >= 0 && row < 10 && col >= 0 && col < 10 && (row === startRow || col === startCol)) {
+            selectedCells = [];
+            if (row === startRow) {
+                for (let c = Math.min(startCol, col); c <= Math.max(startCol, col); c++) selectedCells.push({r: row, c: c});
+            } else {
+                for (let r = Math.min(startRow, row); r <= Math.max(startRow, row); r++) selectedCells.push({r: r, c: col});
             }
         }
     });
@@ -212,12 +220,13 @@ function startWordFind() {
         isDragging = false;
         if (selectedCells.length > 2) {
             let word = selectedCells.map(cell => wordFindGrid[cell.r][cell.c]).join('');
-            let reverseWord = word.split('').reverse().join('');
-            let foundWord = wordFindWords.includes(word) ? word : (wordFindWords.includes(reverseWord) ? reverseWord : null);
+            let reverse = word.split('').reverse().join('');
+            let foundWord = wordFindWords.includes(word) ? word : (wordFindWords.includes(reverse) ? reverse : null);
             if (foundWord && !foundWords.includes(foundWord)) {
                 foundWords.push(foundWord);
                 alert(`Found: ${foundWord}!`);
-                document.getElementById('foundWords').textContent = `Found: ${foundWords.join(', ')}`;
+                const el = document.getElementById('foundWords');
+                if (el) el.textContent = `Found: ${foundWords.join(', ')}`;
                 if (foundWords.length === wordFindWords.length) alert('🎉 All words found!');
             }
         }
@@ -225,38 +234,40 @@ function startWordFind() {
     });
 }
 
-// ============== PLACEHOLDER GAMES ==============
-function startSudoku() { /* same demo as before */ 
+// ============== PLACEHOLDERS ==============
+function startSudoku() {
     const ctx = document.getElementById('gameCanvas').getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
     ctx.fillStyle = '#0f0'; ctx.font = 'bold 18px monospace';
     ctx.fillText('Sudoku Demo', 80, 180);
-    document.getElementById('gameUI').innerHTML = '<p>Full version soon.</p>';
+    document.getElementById('gameUI').innerHTML = '<p>Full Sudoku coming soon.</p>';
 }
-function startRPGBattle() { /* avatar battle demo */ 
+function startRPGBattle() {
     const ctx = document.getElementById('gameCanvas').getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
     ctx.fillStyle = avatarData.bodyColor; ctx.fillRect(80,180,50,70);
     ctx.fillStyle = avatarData.headColor; ctx.fillRect(88,140,34,40);
-    document.getElementById('gameUI').innerHTML = '<p>Avatar battle ready!</p>';
+    document.getElementById('gameUI').innerHTML = '<p>Avatar battle demo.</p>';
 }
-function startRiddle() { document.getElementById('gameUI').innerHTML = `<p>What has keys but can't open locks?</p><input id="riddleAnswer" placeholder="Answer"><button onclick="checkRiddle()">Submit</button>`; }
+function startRiddle() {
+    document.getElementById('gameUI').innerHTML = `<p>What has keys but can't open locks?</p><input id="riddleAnswer" placeholder="Answer"><button onclick="checkRiddle()">Submit</button>`;
+}
 window.checkRiddle = () => {
-    const ans = document.getElementById('riddleAnswer').value.toLowerCase();
+    const ans = (document.getElementById('riddleAnswer') || {}).value.toLowerCase() || '';
     if (ans.includes('piano') || ans.includes('keyboard')) alert('Correct!');
     else alert('Try again.');
 };
-function startStory(){ document.getElementById('gameUI').innerHTML = '<p>Story mode coming.</p>'; }
-function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming.</p>'; }
-function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming.</p>'; }
-function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming.</p>'; }
-function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny game coming.</p>'; }
+function startStory(){ document.getElementById('gameUI').innerHTML = '<p>Story mode coming soon.</p>'; }
+function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming soon.</p>'; }
+function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming soon.</p>'; }
+function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming soon.</p>'; }
+function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny game coming soon.</p>'; }
 
 // ============== UTILS ==============
 function endEvent() {
     document.getElementById('gameContainer').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
-    document.getElementById('status').textContent = 'Progress saved in Supabase • New event tomorrow!';
+    document.getElementById('status').textContent = 'Event saved • New chaos tomorrow!';
 }
 
 function showAvatar() {
@@ -266,21 +277,24 @@ function showAvatar() {
 }
 
 function showPremium() {
-    alert('Premium: $4.99/month or $29 one-time unlocks unlimited events.');
+    alert('Premium unlocks unlimited daily events.');
 }
 
-// ============== INIT ==============
+// ============== INIT (force draw) ==============
 async function init() {
-    const { data } = await supabase.auth.signInAnonymously();
-    userId = data.user.id;
+    try {
+        const { data } = await supabase.auth.signInAnonymously();
+        userId = data.user.id;
 
-    // Load saved avatar
-    const { data: av } = await supabase.from('avatars').select('data').eq('user_id', userId).single();
-    if (av && av.data) avatarData = av.data;
+        const { data: av } = await supabase.from('avatars').select('data').eq('user_id', userId).single();
+        if (av && av.data) avatarData = av.data;
+    } catch (e) {
+        console.warn('Supabase skipped - local mode');
+    }
 
-    drawAvatar();
+    drawAvatar(); // Force draw
     document.getElementById('avatarScreen').classList.remove('hidden');
-    document.getElementById('status').textContent = '✅ Connected to Supabase • 1 free daily event';
+    document.getElementById('status').textContent = '✅ Ready • Customize avatar then save';
 }
 init();
 </script>
