@@ -28,13 +28,21 @@
             font-size:18px; 
             width:90%; 
             max-width:320px; 
+            touch-action: manipulation;
+        }
+        button:active {
+            background:#0f0;
+            color:#111;
+            transform: scale(0.95);
         }
         canvas { 
             image-rendering: pixelated; 
-            border:2px solid #0f0; 
-            background:#000; 
+            border:3px solid #0f0; 
+            background:#111; 
             max-width:100%; 
             touch-action: none; 
+            display: block;
+            margin: 10px auto;
         }
         .hidden { display:none; }
         input { 
@@ -72,7 +80,7 @@
     <div id="mainMenu" class="hidden">
         <button onclick="startDailyEvent()">⚔️ Forge Today's Chaos</button>
         <button onclick="showAvatar()">👾 Customize Avatar</button>
-        <button onclick="showPremium()">⭐ Go Premium (Unlimited Events)</button>
+        <button onclick="showPremium()">⭐ Go Premium (Unlimited)</button>
     </div>
 
     <!-- Game Container -->
@@ -87,39 +95,32 @@
 </div>
 
 <script>
-// ============== SUPABASE (non-blocking) ==============
-const SUPABASE_URL = 'https://rsswlyvuypjcwjbijvmk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzc3dseXZ1eXBqY3dqYmlqdm1rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5NTk1ODgsImV4cCI6MjA5MDUzNTU4OH0.kkftjqq-SouvplCuCSXufMysioQUPrCRuDPaGj17IgE';
-
-let supabase = null;
-try {
-    supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} catch (e) {
-    console.warn("Supabase not loaded - running local mode");
-}
-
-let userId = 'local-' + Date.now();
-let avatarData = { headColor: '#fdb', bodyColor: '#0f0', hat: 1 };
-
-// ============== AVATAR (Fixed - always draws) ==============
+// ============== AVATAR ==============
 const avCanvas = document.getElementById('avatarCanvas');
 const avCtx = avCanvas.getContext('2d');
 
+let avatarData = { 
+    headColor: '#fdb', 
+    bodyColor: '#0f0', 
+    hat: 1 
+};
+
 function drawAvatar() {
-    avCtx.fillStyle = '#000'; 
+    avCtx.clearRect(0, 0, 160, 160);
+    avCtx.fillStyle = '#111';
     avCtx.fillRect(0, 0, 160, 160);
-    
+
     // Head
-    avCtx.fillStyle = avatarData.headColor || '#fdb'; 
+    avCtx.fillStyle = avatarData.headColor;
     avCtx.fillRect(56, 32, 48, 48);
     
     // Body
-    avCtx.fillStyle = avatarData.bodyColor || '#0f0'; 
+    avCtx.fillStyle = avatarData.bodyColor;
     avCtx.fillRect(48, 80, 64, 64);
     
     // Eyes
-    avCtx.fillStyle = '#000'; 
-    avCtx.fillRect(68, 48, 8, 12); 
+    avCtx.fillStyle = '#000';
+    avCtx.fillRect(68, 48, 8, 12);
     avCtx.fillRect(84, 48, 8, 12);
     
     // Mouth
@@ -128,7 +129,7 @@ function drawAvatar() {
     
     // Hat
     if (avatarData.hat) {
-        avCtx.fillStyle = '#f00'; 
+        avCtx.fillStyle = '#f00';
         avCtx.fillRect(48, 20, 64, 20);
         avCtx.fillStyle = '#ff0';
         avCtx.fillRect(60, 15, 40, 8);
@@ -142,14 +143,14 @@ function randomizeAvatar() {
     drawAvatar();
 }
 
-async function saveAvatar() {
-    drawAvatar(); // Force redraw before saving
-    alert('✅ Avatar saved successfully! (Local mode for now)');
+function saveAvatar() {
+    drawAvatar();
+    alert('✅ Avatar saved!');
     document.getElementById('avatarScreen').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
 }
 
-// ============== DAILY EVENT (starts with Word Find for easy testing) ==============
+// ============== DAILY EVENT ==============
 const eventTypes = [
     {name: "Word Find", time: "20-25 min", fn: startWordFind},
     {name: "Sudoku", time: "20 min", fn: startSudoku},
@@ -166,21 +167,21 @@ function startDailyEvent() {
     document.getElementById('mainMenu').classList.add('hidden');
     document.getElementById('gameContainer').classList.remove('hidden');
     
-    const chosen = eventTypes[0]; // Word Find first for testing
+    // Start with Word Find for easy testing
+    const chosen = eventTypes[0];
     document.getElementById('eventTitle').textContent = `${chosen.name} • ${chosen.time}`;
     document.getElementById('gameUI').innerHTML = '';
     chosen.fn();
 }
 
-// ============== WORD FIND (unchanged - fully working) ==============
+// ============== FULL WORD FIND GAME ==============
 let wordFindGrid = [];
 let wordFindWords = ["CHAOS","FORGE","PIXEL","AVATAR","DAILY","RANDOM","PUZZLE","BREAK","QUEST","GAME"];
 let foundWords = [];
 let selectedCells = [];
 
 function startWordFind() {
-    // ... (same full Word Find code as before - kept identical)
-    wordFindGrid = [ /* same 10x10 grid as previous version */ 
+    wordFindGrid = [
         ['E','C','H','A','O','S','J','B','Z','X'],
         ['S','O','B','D','A','I','L','Y','D','K'],
         ['M','J','N','F','O','R','G','E','J','N'],
@@ -212,7 +213,7 @@ function startWordFind() {
         }
         document.getElementById('gameUI').innerHTML = `
             <div id="foundWords">Found: ${foundWords.join(', ') || 'None yet'}</div>
-            <p>Drag finger across letters (horizontal or vertical).</p>
+            <p>Drag finger across letters (horizontal or vertical only).</p>
         `;
     }
 
@@ -277,13 +278,13 @@ function startWordFind() {
     });
 }
 
-// ============== Other games (shortened for clarity) ==============
-function startSudoku() { /* same as before */ 
+// ============== OTHER GAMES (placeholders) ==============
+function startSudoku() {
     const ctx = document.getElementById('gameCanvas').getContext('2d');
     ctx.fillStyle = '#000'; ctx.fillRect(0,0,320,380);
     ctx.fillStyle = '#0f0'; ctx.font = 'bold 18px monospace';
     ctx.fillText('Sudoku Demo', 80, 180);
-    document.getElementById('gameUI').innerHTML = '<p>Full Sudoku coming next.</p>';
+    document.getElementById('gameUI').innerHTML = '<p>Full Sudoku coming soon.</p>';
 }
 
 function startRPGBattle() {
@@ -295,19 +296,23 @@ function startRPGBattle() {
 }
 
 function startRiddle() {
-    document.getElementById('gameUI').innerHTML = `<p>What has keys but can't open locks?</p><input type="text" id="riddleAnswer"><button onclick="checkRiddle()">Submit</button>`;
+    document.getElementById('gameUI').innerHTML = `
+        <p>What has keys but can't open locks?</p>
+        <input type="text" id="riddleAnswer" placeholder="Answer">
+        <button onclick="checkRiddle()">Submit</button>
+    `;
 }
 window.checkRiddle = function() {
-    const ans = (document.getElementById('riddleAnswer') || {}).value || ''.toLowerCase();
+    const ans = document.getElementById('riddleAnswer').value.toLowerCase();
     if (ans.includes('piano') || ans.includes('keyboard')) alert('Correct!');
     else alert('Try again.');
 };
 
 function startStory(){ document.getElementById('gameUI').innerHTML = '<p>Story mode coming soon.</p>'; }
-function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming.</p>'; }
-function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming.</p>'; }
-function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming.</p>'; }
-function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny tap game coming.</p>'; }
+function startSkill(){ document.getElementById('gameUI').innerHTML = '<p>Skill lesson coming soon.</p>'; }
+function startLanguage(){ document.getElementById('gameUI').innerHTML = '<p>Language cards coming soon.</p>'; }
+function startMeme(){ document.getElementById('gameUI').innerHTML = '<p>Meme match coming soon.</p>'; }
+function startFunnyGame(){ document.getElementById('gameUI').innerHTML = '<p>Funny tap game coming soon.</p>'; }
 
 // ============== UTILS ==============
 function endEvent() {
@@ -323,15 +328,14 @@ function showAvatar() {
 }
 
 function showPremium() {
-    alert('Premium unlocks unlimited events ($4.99/mo or $29 one-time). Coming next.');
+    alert('Premium unlocks unlimited events ($4.99/mo or $29 one-time).');
 }
 
-// ============== INIT - Fixed draw ==============
+// ============== INIT ==============
 function init() {
-    console.log('🚀 Chaos Forge starting...');
-    drawAvatar();  // Force immediate draw
+    drawAvatar();   // Force draw on load
     document.getElementById('avatarScreen').classList.remove('hidden');
-    document.getElementById('status').textContent = '✅ Avatar ready • Tap Randomize then Save';
+    document.getElementById('status').textContent = '✅ Ready • Tap Randomize then Save';
 }
 init();
 </script>
