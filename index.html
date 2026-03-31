@@ -55,35 +55,41 @@ const introCtx = introCanvas.getContext('2d');
 function drawIntro() {
     introCtx.fillStyle = '#000'; introCtx.fillRect(0,0,320,240);
     
-    // Stone background texture
-    introCtx.fillStyle = '#331';
-    for (let i = 0; i < 240; i += 12) {
-        introCtx.fillRect(0, i, 320, 4);
+    // Stone wall background
+    introCtx.fillStyle = '#442';
+    for (let i = 0; i < 240; i += 16) {
+        introCtx.fillRect(0, i, 320, 6);
     }
     
-    // Castle towers
+    // Castle walls
     introCtx.fillStyle = '#555';
-    introCtx.fillRect(40, 80, 40, 120);
-    introCtx.fillRect(240, 80, 40, 120);
+    introCtx.fillRect(20, 100, 280, 80);
     introCtx.fillStyle = '#777';
-    introCtx.fillRect(30, 60, 60, 30);
-    introCtx.fillRect(230, 60, 60, 30);
+    introCtx.fillRect(40, 70, 40, 40);
+    introCtx.fillRect(240, 70, 40, 40);
     
-    // Big "CHAOS FORGE" banner
+    // CHAOS FORGE banner (medieval font style)
     introCtx.fillStyle = '#fc0';
     introCtx.font = 'bold 26px monospace';
-    introCtx.fillText('CHAOS', 72, 95);
-    introCtx.fillText('FORGE', 78, 125);
+    introCtx.fillText('CHAOS', 68, 95);
+    introCtx.fillText('FORGE', 72, 125);
     
-    // Sword (medieval centerpiece)
-    introCtx.strokeStyle = '#ccc'; introCtx.lineWidth = 12;
-    introCtx.beginPath(); introCtx.moveTo(160, 160); introCtx.lineTo(160, 220); introCtx.stroke();
-    introCtx.fillStyle = '#f33';
-    introCtx.fillRect(145, 145, 30, 20); // hilt
+    // Anvil + Hammer (forge theme)
+    introCtx.fillStyle = '#888';
+    introCtx.fillRect(130, 170, 60, 30); // anvil base
+    introCtx.fillRect(145, 155, 30, 20); // anvil top
     
-    // Flame effect at base of forge
+    // Hammer
+    introCtx.fillStyle = '#ccc';
+    introCtx.fillRect(200, 160, 8, 40); // handle
+    introCtx.fillStyle = '#666';
+    introCtx.fillRect(190, 150, 30, 18); // head
+    
+    // Forge flames
     introCtx.fillStyle = '#f80';
-    introCtx.fillRect(140, 225, 40, 12);
+    introCtx.fillRect(135, 195, 10, 15);
+    introCtx.fillRect(150, 190, 15, 20);
+    introCtx.fillRect(170, 195, 10, 12);
 }
 
 function startIntro() {
@@ -92,61 +98,56 @@ function startIntro() {
         document.getElementById('introScreen').classList.add('hidden');
         document.getElementById('mainMenu').classList.remove('hidden');
         drawMenuCanvas();
-    }, 10000); // exactly 10 seconds
+    }, 10000);
 }
 
-// ============== MAIN MENU CANVAS (Medieval Shield Style) ==============
+// ============== MAIN MENU CANVAS ==============
 const menuCanvas = document.getElementById('menuCanvas');
 const menuCtx = menuCanvas.getContext('2d');
 
 function drawMenuCanvas() {
     menuCtx.fillStyle = '#000'; menuCtx.fillRect(0,0,320,90);
     
-    // Shield border
-    menuCtx.strokeStyle = '#fc0'; menuCtx.lineWidth = 6;
-    menuCtx.strokeRect(25, 10, 270, 70);
+    // Medieval shield border
+    menuCtx.strokeStyle = '#fc0'; menuCtx.lineWidth = 8;
+    menuCtx.strokeRect(20, 12, 280, 66);
     
-    // Inner glow
     menuCtx.strokeStyle = '#0f0'; menuCtx.lineWidth = 3;
-    menuCtx.strokeRect(35, 18, 250, 54);
+    menuCtx.strokeRect(30, 20, 260, 50);
     
     menuCtx.fillStyle = '#0f0';
-    menuCtx.font = 'bold 24px monospace';
-    menuCtx.fillText('MAIN FORGE', 68, 52);
+    menuCtx.font = 'bold 23px monospace';
+    menuCtx.fillText('MAIN FORGE', 72, 52);
 }
 
-// ============== MENU OPTIONS (Plenty of space for expansion) ==============
+// ============== MENU OPTIONS (expandable) ==============
 function selectOption(n) {
     const status = document.getElementById('menuStatus');
     
     if (n === 1) {
-        status.textContent = '1. NEW GAME - Area ready for full game code';
-        // TODO: Insert new game logic here (avatar creation, story start, etc.)
-        alert('New Game selected - Expand this block');
+        status.textContent = '1. NEW GAME - Ready for expansion';
+        alert('New Game selected');
     } 
     else if (n === 2) {
-        status.textContent = '2. LOAD GAME - Area ready for save loading';
+        status.textContent = '2. LOAD GAME - Ready for expansion';
         alert('Load Game selected');
     } 
     else if (n === 3) {
-        status.textContent = '3. FAST PLAY - Daily random chaos events';
-        // TODO: Connect to your random daily events + avatar here
-        alert('Fast Play selected - This will become your 20-30 min daily mode');
+        status.textContent = '3. FAST PLAY (Daily Chaos) - Ready for random events';
+        alert('Fast Play selected - Daily 20-30 min chaos coming here');
     } 
     else if (n === 4) {
-        status.textContent = '4. SETTINGS (TBD) - Area ready';
+        status.textContent = '4. SETTINGS (TBD) - Ready for expansion';
         alert('Option 4 selected');
     } 
     else if (n === 5) {
-        if (confirm('Exit Chaos Forge?')) {
-            window.close();
-        }
+        if (confirm('Exit Chaos Forge?')) window.close();
     }
 }
 
 // ============== INIT ==============
 function init() {
-    startIntro();   // 10-second medieval intro then menu
+    startIntro();
 }
 init();
 </script>
