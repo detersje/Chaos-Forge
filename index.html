@@ -18,7 +18,7 @@
 <body>
 <div id="screen">
 
-    <!-- Golden Brick Start Screen -->
+    <!-- Golden Brick Start -->
     <div id="startScreen" class="golden-brick">
         <h1>DREAMFORGE</h1>
         <p style="color:#ff0;font-size:18px;margin:30px 0;">ENTER THE FORGE</p>
@@ -36,7 +36,7 @@
         <p id="menuStatus" style="margin-top:25px;color:#cc0;">CHOOSE YOUR PATH</p>
     </div>
 
-    <!-- Avatar Creation Screen (16-bit Dino) -->
+    <!-- Avatar Creation -->
     <div id="avatarScreen" class="hidden golden-brick">
         <h1 style="font-size:28px;margin:15px 0;">CREATE YOUR AVATAR</h1>
         <canvas id="avatarCanvas" width="240" height="240"></canvas>
@@ -56,19 +56,67 @@
 
 <script>
 // ============== STATE ==============
-let avatarParts = {
-    head: 0,
-    body: 0,
-    feet: 0
+let currentDino = 0; // 0=green, 1=red, 2=yellow, 3=blue
+
+const spriteSheet = new Image();
+spriteSheet.src = "dino-sprites.png";   // ← your uploaded file
+
+const canvas = document.getElementById('avatarCanvas');
+const ctx = canvas.getContext('2d');
+
+// Sprite positions (adjust if your sheet is different size)
+const dinoPositions = [
+    {x: 0, y: 0},   // green row
+    {x: 0, y: 64},  // red row
+    {x: 0, y: 128}, // yellow row
+    {x: 0, y: 192}  // blue row
+];
+
+function drawAvatar() {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, 240, 240);
+    
+    // Draw selected dino (scaled up nicely)
+    ctx.drawImage(
+        spriteSheet,
+        dinoPositions[currentDino].x, dinoPositions[currentDino].y, 64, 64,   // source
+        60, 60, 120, 120                                                        // destination
+    );
+}
+
+spriteSheet.onload = () => {
+    if (document.getElementById('avatarScreen').classList.contains('hidden') === false) {
+        drawAvatar();
+    }
 };
 
-// ============== ENTER FORGE ==============
+// ============== CYCLE PARTS (using your sprite sheet rows) ==============
+function cyclePart(part) {
+    currentDino = (currentDino + 1) % 4;
+    drawAvatar();
+}
+
+function randomizeAvatar() {
+    currentDino = Math.floor(Math.random() * 4);
+    drawAvatar();
+}
+
+function saveAvatar() {
+    alert('✅ Avatar saved! (16-bit dino from your sprite sheet)');
+    backToMenu();
+}
+
+function backToMenu() {
+    document.getElementById('avatarScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
+}
+
+// ============== MENU FLOW ==============
 function enterForge() {
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
 }
 
-// ============== MAIN MENU ==============
 function selectOption(n) {
     if (n === 1) {
         document.getElementById('mainMenu').classList.add('hidden');
@@ -77,64 +125,8 @@ function selectOption(n) {
     } else if (n === 5) {
         if (confirm('Exit DreamForge?')) window.close();
     } else {
-        alert(`Option ${n} selected - ready for expansion`);
+        alert(`Option ${n} selected`);
     }
-}
-
-// ============== 16-BIT DINO AVATAR ==============
-const canvas = document.getElementById('avatarCanvas');
-const ctx = canvas.getContext('2d');
-
-const headColors = ['#0f0', '#f80', '#08f', '#f0f', '#ff0'];
-const bodyColors = ['#0a0', '#c60', '#06c', '#c0c', '#cc0'];
-const footColors = ['#080', '#840', '#048', '#808', '#880'];
-
-function drawAvatar() {
-    ctx.fillStyle = '#111';
-    ctx.fillRect(0, 0, 240, 240);
-
-    // Head
-    ctx.fillStyle = headColors[avatarParts.head];
-    ctx.fillRect(70, 40, 100, 80);           // head base
-    ctx.fillStyle = '#000';
-    ctx.fillRect(90, 65, 20, 20);            // eye
-    ctx.fillRect(130, 65, 20, 20);           // eye
-
-    // Body
-    ctx.fillStyle = bodyColors[avatarParts.body];
-    ctx.fillRect(80, 120, 80, 80);           // body
-
-    // Feet
-    ctx.fillStyle = footColors[avatarParts.feet];
-    ctx.fillRect(70, 190, 35, 30);           // left foot
-    ctx.fillRect(135, 190, 35, 30);          // right foot
-
-    // Simple tail
-    ctx.fillStyle = bodyColors[avatarParts.body];
-    ctx.fillRect(40, 140, 40, 25);
-}
-
-function cyclePart(part) {
-    avatarParts[part] = (avatarParts[part] + 1) % 5;
-    drawAvatar();
-}
-
-function randomizeAvatar() {
-    avatarParts.head = Math.floor(Math.random() * 5);
-    avatarParts.body = Math.floor(Math.random() * 5);
-    avatarParts.feet = Math.floor(Math.random() * 5);
-    drawAvatar();
-}
-
-function saveAvatar() {
-    alert('✅ Avatar saved! (Default 16-bit dino with your changes)');
-    // TODO: Save to Supabase or local storage later
-    backToMenu();
-}
-
-function backToMenu() {
-    document.getElementById('avatarScreen').classList.add('hidden');
-    document.getElementById('mainMenu').classList.remove('hidden');
 }
 </script>
 </body>
