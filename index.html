@@ -5,115 +5,136 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DreamForge</title>
     <style>
-        body { 
-            margin: 0; 
-            font-family: monospace; 
-            background: #111; 
-            color: #ff0; 
-            text-align: center; 
-            overflow: hidden; 
-        }
-        #screen { 
-            max-width: 100%; 
-            margin: auto; 
-            min-height: 100vh; 
-            padding: 20px; 
-            box-sizing: border-box; 
-        }
-
-        /* Golden Brick Background */
-        .golden-brick {
-            background: repeating-linear-gradient(
-                45deg,
-                #222 0px,
-                #222 20px,
-                #cc0 20px,
-                #cc0 40px,
-                #222 40px,
-                #222 60px
-            );
-            border: 8px solid #cc0;
-            box-shadow: 0 0 20px #ff0 inset;
-        }
-
-        h1 {
-            font-size: 42px;
-            margin: 40px 0 20px;
-            text-shadow: 0 0 15px #ff0, 0 0 25px #cc0;
-            letter-spacing: 4px;
-            color: #ff0;
-        }
-
-        button {
-            background: #222;
-            color: #ff0;
-            border: 6px solid #cc0;
-            padding: 18px 30px;
-            margin: 15px auto;
-            font-size: 20px;
-            font-weight: bold;
-            width: 85%;
-            max-width: 340px;
-            display: block;
-            box-shadow: 0 0 15px #ff0;
-        }
-        button:active {
-            background: #cc0;
-            color: #111;
-            transform: scale(0.95);
-        }
-
-        .hidden { display: none; }
+        body { margin:0; font-family: monospace; background:#111; color:#ff0; text-align:center; overflow:hidden; }
+        #screen { max-width:100%; margin:auto; min-height:100vh; padding:20px; box-sizing:border-box; }
+        .golden-brick { background:repeating-linear-gradient(45deg,#222 0px,#222 20px,#cc0 20px,#cc0 40px,#222 40px,#222 60px); border:8px solid #cc0; box-shadow:0 0 20px #ff0 inset; }
+        h1 { font-size:42px; margin:30px 0 20px; text-shadow:0 0 15px #ff0; letter-spacing:4px; }
+        button { background:#222; color:#ff0; border:6px solid #cc0; padding:16px 24px; margin:12px auto; font-size:19px; width:85%; max-width:340px; display:block; font-weight:bold; }
+        button:active { background:#cc0; color:#111; transform:scale(0.95); }
+        .hidden { display:none; }
+        canvas { image-rendering:pixelated; border:6px solid #cc0; background:#111; display:block; margin:20px auto; }
     </style>
 </head>
 <body>
 <div id="screen">
 
-    <!-- Start Screen - Golden Bricks -->
+    <!-- Golden Brick Start Screen -->
     <div id="startScreen" class="golden-brick">
         <h1>DREAMFORGE</h1>
-        <p style="color:#ff0; font-size:18px; margin-top:30px;">ENTER THE FORGE</p>
-        
-        <!-- Bottom Center Button -->
-        <button onclick="enterForge()" style="position:absolute; bottom:40px; left:50%; transform:translateX(-50%); width:70%;">
-            ENTER
-        </button>
+        <p style="color:#ff0;font-size:18px;margin:30px 0;">ENTER THE FORGE</p>
+        <button onclick="enterForge()" style="width:70%;">ENTER</button>
     </div>
 
-    <!-- Second Screen - Black & Gold Menu -->
+    <!-- Main Menu -->
     <div id="mainMenu" class="hidden golden-brick">
         <h1>DREAMFORGE</h1>
-        
         <button onclick="selectOption(1)">1. NEW GAME</button>
         <button onclick="selectOption(2)">2. LOAD GAME</button>
         <button onclick="selectOption(3)">3. FAST PLAY</button>
         <button onclick="selectOption(4)">4. SETTINGS</button>
         <button onclick="selectOption(5)">5. EXIT</button>
+        <p id="menuStatus" style="margin-top:25px;color:#cc0;">CHOOSE YOUR PATH</p>
+    </div>
+
+    <!-- Avatar Creation Screen (16-bit Dino) -->
+    <div id="avatarScreen" class="hidden golden-brick">
+        <h1 style="font-size:28px;margin:15px 0;">CREATE YOUR AVATAR</h1>
+        <canvas id="avatarCanvas" width="240" height="240"></canvas>
         
-        <p id="menuStatus" style="margin-top:30px; color:#cc0; font-size:16px;">CHOOSE YOUR PATH</p>
+        <div style="margin:15px 0;">
+            <button onclick="cyclePart('head')" style="width:45%;display:inline-block;">HEAD</button>
+            <button onclick="cyclePart('body')" style="width:45%;display:inline-block;">BODY</button>
+            <button onclick="cyclePart('feet')" style="width:45%;display:inline-block;">FEET</button>
+            <button onclick="randomizeAvatar()" style="width:45%;display:inline-block;">RANDOMIZE</button>
+        </div>
+        
+        <button onclick="saveAvatar()" style="background:#cc0;color:#111;border-color:#ff0;">SAVE AVATAR & CONTINUE</button>
+        <button onclick="backToMenu()" style="background:#222;color:#ff0;">BACK TO MENU</button>
     </div>
 
 </div>
 
 <script>
+// ============== STATE ==============
+let avatarParts = {
+    head: 0,
+    body: 0,
+    feet: 0
+};
+
+// ============== ENTER FORGE ==============
 function enterForge() {
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('mainMenu').classList.remove('hidden');
 }
 
+// ============== MAIN MENU ==============
 function selectOption(n) {
-    const status = document.getElementById('menuStatus');
-    
-    if (n === 1) status.textContent = 'NEW GAME selected';
-    else if (n === 2) status.textContent = 'LOAD GAME selected';
-    else if (n === 3) status.textContent = 'FAST PLAY selected';
-    else if (n === 4) status.textContent = 'SETTINGS selected';
-    else if (n === 5) {
+    if (n === 1) {
+        document.getElementById('mainMenu').classList.add('hidden');
+        document.getElementById('avatarScreen').classList.remove('hidden');
+        drawAvatar();
+    } else if (n === 5) {
         if (confirm('Exit DreamForge?')) window.close();
-        return;
+    } else {
+        alert(`Option ${n} selected - ready for expansion`);
     }
-    
-    alert(`Option ${n} selected`);
+}
+
+// ============== 16-BIT DINO AVATAR ==============
+const canvas = document.getElementById('avatarCanvas');
+const ctx = canvas.getContext('2d');
+
+const headColors = ['#0f0', '#f80', '#08f', '#f0f', '#ff0'];
+const bodyColors = ['#0a0', '#c60', '#06c', '#c0c', '#cc0'];
+const footColors = ['#080', '#840', '#048', '#808', '#880'];
+
+function drawAvatar() {
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, 240, 240);
+
+    // Head
+    ctx.fillStyle = headColors[avatarParts.head];
+    ctx.fillRect(70, 40, 100, 80);           // head base
+    ctx.fillStyle = '#000';
+    ctx.fillRect(90, 65, 20, 20);            // eye
+    ctx.fillRect(130, 65, 20, 20);           // eye
+
+    // Body
+    ctx.fillStyle = bodyColors[avatarParts.body];
+    ctx.fillRect(80, 120, 80, 80);           // body
+
+    // Feet
+    ctx.fillStyle = footColors[avatarParts.feet];
+    ctx.fillRect(70, 190, 35, 30);           // left foot
+    ctx.fillRect(135, 190, 35, 30);          // right foot
+
+    // Simple tail
+    ctx.fillStyle = bodyColors[avatarParts.body];
+    ctx.fillRect(40, 140, 40, 25);
+}
+
+function cyclePart(part) {
+    avatarParts[part] = (avatarParts[part] + 1) % 5;
+    drawAvatar();
+}
+
+function randomizeAvatar() {
+    avatarParts.head = Math.floor(Math.random() * 5);
+    avatarParts.body = Math.floor(Math.random() * 5);
+    avatarParts.feet = Math.floor(Math.random() * 5);
+    drawAvatar();
+}
+
+function saveAvatar() {
+    alert('✅ Avatar saved! (Default 16-bit dino with your changes)');
+    // TODO: Save to Supabase or local storage later
+    backToMenu();
+}
+
+function backToMenu() {
+    document.getElementById('avatarScreen').classList.add('hidden');
+    document.getElementById('mainMenu').classList.remove('hidden');
 }
 </script>
 </body>
